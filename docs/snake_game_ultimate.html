@@ -13,11 +13,13 @@
       background-size: contain;
       color: #fff;
       overflow: hidden;
+      transition: background-color 0.3s;
     }
     canvas {
       display: block;
       background: rgba(0, 0, 0, 0.75);
       margin: auto;
+      touch-action: none;
     }
     #ui, #modeSelect {
       position: absolute;
@@ -26,6 +28,7 @@
       display: flex;
       justify-content: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
     button {
       padding: 10px 16px;
@@ -36,15 +39,16 @@
       color: #fff;
       cursor: pointer;
     }
-    #hud {
+    #hud, #controls {
       position: absolute;
       top: 10px;
-      left: 10px;
       background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 6px;
       font-size: 14px;
     }
+    #hud { left: 10px; }
+    #controls { right: 10px; display: flex; flex-direction: column; gap: 6px; }
   </style>
 </head>
 <body>
@@ -53,6 +57,10 @@
     <div>Score: <span id="score">0</span></div>
     <div>Best: <span id="best">0</span></div>
     <div>Time: <span id="timer">0</span>s</div>
+  </div>
+  <div id="controls">
+    <button onclick="toggleTheme()">🌓 Theme</button>
+    <button onclick="shareScore()">📤 Share</button>
   </div>
   <div id="modeSelect">
     <button onclick="startGame('solo')">Solo Mode</button>
@@ -71,11 +79,10 @@
     const ctx = canvas.getContext('2d');
     const uiPanel = document.getElementById('ui');
     const modeSelect = document.getElementById('modeSelect');
-    let CELL = 20;
-    let cols, rows, gameInterval, gameTime = 0;
-    let snake, dir, nextDir, apple, score, bestScore = 0, paused = false;
-    let aiSnake = [], aiDir = {x: 0, y: 1};
-    let mode = 'solo';
+    let CELL = 20, cols, rows, gameInterval, gameTime = 0;
+    let snake = [], dir = {}, nextDir = {}, apple = {}, score = 0, bestScore = 0, paused = false;
+    let aiSnake = [], aiDir = {}, mode = 'solo';
+    let powerUps = [], bombs = [], touchStartX = 0, touchStartY = 0, darkMode = true;
 
     function resize() {
       cols = Math.floor(window.innerWidth / CELL);
@@ -84,11 +91,24 @@
       canvas.height = rows * CELL;
     }
 
+    function toggleTheme() {
+      darkMode = !darkMode;
+      document.body.style.backgroundColor = darkMode ? '#000' : '#eee';
+      document.body.style.color = darkMode ? '#fff' : '#000';
+    }
+
+    function shareScore() {
+      const score = document.getElementById('score').textContent;
+      const text = `🚀 I just scored ${score} in the Ultimate Snake Game! 🐍 Try to beat it: https://22greatness.github.io/Snake-Game/`;
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+
     function startGame(selectedMode) {
       mode = selectedMode;
       modeSelect.style.display = 'none';
       uiPanel.style.display = 'flex';
-      initGame();
+      loadGame();
     }
 
     function initGame() {
@@ -96,34 +116,31 @@
       if (mode === 'ai') aiSnake = [{x: 15, y: 5}];
       dir = {x: 1, y: 0};
       nextDir = dir;
-      spawnApple();
       score = 0;
       gameTime = 0;
+      powerUps = [];
+      bombs = [];
+      spawnApple();
       updateHUD();
       clearInterval(gameInterval);
       gameInterval = setInterval(gameLoop, 100);
     }
 
     function spawnApple() {
-      apple = {
-        x: Math.floor(Math.random() * cols),
-        y: Math.floor(Math.random() * rows)
-      };
+      apple = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+    }
+    function spawnPowerUp() {
+      powerUps.push({ x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows) });
+    }
+    function spawnBomb() {
+      bombs.push({ x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows) });
     }
 
     function setDir(x, y) {
-      if ((x !== -dir.x || y !== -dir.y) && !paused) {
-        nextDir = {x, y};
-      }
+      if ((x !== -dir.x || y !== -dir.y) && !paused) nextDir = {x, y};
     }
-
-    function togglePause() {
-      paused = !paused;
-    }
-
-    function restartGame() {
-      initGame();
-    }
+    function togglePause() { paused = !paused; }
+    function restartGame() { initGame(); saveGame(); }
 
     function updateHUD() {
       document.getElementById('score').textContent = score;
@@ -131,68 +148,78 @@
       document.getElementById('timer').textContent = gameTime;
     }
 
+    function saveGame() {
+      localStorage.setItem('snake_save', JSON.stringify({snake, dir, nextDir, apple, score, bestScore, gameTime, powerUps, bombs}));
+    }
+
+    function loadGame() {
+      const data = JSON.parse(localStorage.getItem('snake_save'));
+      if (data) {
+        snake = data.snake || [];
+        dir = data.dir || {x:1,y:0};
+        nextDir = data.nextDir || dir;
+        apple = data.apple || {};
+        score = data.score || 0;
+        bestScore = data.bestScore || 0;
+        gameTime = data.gameTime || 0;
+        powerUps = data.powerUps || [];
+        bombs = data.bombs || [];
+        updateHUD();
+        clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, 100);
+      } else initGame();
+    }
+
     function gameLoop() {
       if (paused) return;
       gameTime++;
       dir = nextDir;
-
       const head = {x: (snake[0].x + dir.x + cols) % cols, y: (snake[0].y + dir.y + rows) % rows};
-      if (snake.some(s => s.x === head.x && s.y === head.y)) {
-        alert('Game Over!');
+      if (snake.some(s => s.x === head.x && s.y === head.y) || bombs.some(b => b.x === head.x && b.y === head.y)) {
+        alert(score >= 10 ? '🏅 Achievement: Scored 10+!\nGame Over!' : 'Game Over!');
         bestScore = Math.max(score, bestScore);
-        initGame();
-        return;
+        initGame(); return;
       }
       snake.unshift(head);
       if (head.x === apple.x && head.y === apple.y) {
         score++;
         spawnApple();
-      } else {
-        snake.pop();
-      }
+      } else if (powerUps.some(p => p.x === head.x && p.y === head.y)) {
+        score += 5;
+        powerUps = powerUps.filter(p => p.x !== head.x || p.y !== head.y);
+      } else snake.pop();
 
       if (mode === 'ai') {
         const aiHead = aiSnake[0];
-        if (aiHead.x < apple.x) aiDir = {x: 1, y: 0};
-        else if (aiHead.x > apple.x) aiDir = {x: -1, y: 0};
-        else if (aiHead.y < apple.y) aiDir = {x: 0, y: 1};
-        else if (aiHead.y > apple.y) aiDir = {x: 0, y: -1};
-
+        aiDir = aiHead.x < apple.x ? {x:1,y:0} : aiHead.x > apple.x ? {x:-1,y:0} : aiHead.y < apple.y ? {x:0,y:1} : {x:0,y:-1};
         const newAi = {x: (aiHead.x + aiDir.x + cols) % cols, y: (aiHead.y + aiDir.y + rows) % rows};
         aiSnake.unshift(newAi);
-        if (newAi.x === apple.x && newAi.y === apple.y) {
-          spawnApple();
-        } else {
-          aiSnake.pop();
-        }
+        if (newAi.x === apple.x && newAi.y === apple.y) spawnApple(); else aiSnake.pop();
       }
+
+      if (gameTime % 30 === 0) spawnPowerUp();
+      if (gameTime % 50 === 0) spawnBomb();
 
       updateHUD();
       drawGame();
+      saveGame();
     }
 
     function drawGame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      snake.forEach((s, i) => {
-        ctx.fillStyle = i === 0 ? '#0f0' : '#fff';
-        ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
-      });
-
-      if (mode === 'ai') {
-        aiSnake.forEach((s, i) => {
-          ctx.fillStyle = i === 0 ? '#f0f' : '#ccc';
-          ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
-        });
-      }
-
-      ctx.fillStyle = '#f00';
-      ctx.fillRect(apple.x * CELL, apple.y * CELL, CELL - 1, CELL - 1);
+      snake.forEach((s, i) => { ctx.fillStyle = i === 0 ? '#0f0' : '#fff'; ctx.fillRect(s.x*CELL, s.y*CELL, CELL-1, CELL-1); });
+      if (mode === 'ai') aiSnake.forEach((s,i)=>{ ctx.fillStyle = i===0 ? '#f0f' : '#ccc'; ctx.fillRect(s.x*CELL, s.y*CELL, CELL-1,CELL-1); });
+      ctx.fillStyle = '#f00'; ctx.fillRect(apple.x*CELL, apple.y*CELL, CELL-1, CELL-1);
+      powerUps.forEach(p => { ctx.fillStyle = '#0ff'; ctx.fillRect(p.x*CELL, p.y*CELL, CELL-1, CELL-1); });
+      bombs.forEach(b => { ctx.fillStyle = '#f90'; ctx.fillRect(b.x*CELL, b.y*CELL, CELL-1, CELL-1); });
     }
 
-    window.addEventListener('resize', () => {
-      resize();
-      drawGame();
+    window.addEventListener('resize', () => { resize(); drawGame(); });
+    canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
+    canvas.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0); else setDir(0, dy > 0 ? 1 : -1);
     });
 
     resize();
