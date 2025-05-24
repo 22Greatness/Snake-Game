@@ -11,9 +11,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      background: url('LOGO.png') center center / cover no-repeat fixed;
-      color: #fff;
+      background: #000 url('LOGO.png') center center no-repeat;
+      background-size: contain;
       font-family: sans-serif;
+      color: #fff;
     }
     #game {
       background: rgba(0, 0, 0, 0.75);
@@ -46,10 +47,16 @@
       border-radius: 8px;
       font-size: 18px;
     }
+    #audio-toggle {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
   </style>
 </head>
 <body>
   <div id="scoreboard">Score: <span id="score">0</span></div>
+  <button id="audio-toggle">🔊</button>
   <canvas id="game"></canvas>
   <div id="ui">
     <button id="up">↑</button>
@@ -60,9 +67,10 @@
     <button id="restart">Restart</button>
   </div>
 
-  <audio id="eatSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
-  <audio id="gameOverSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-  <audio id="buttonSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="eatSound" src="eat.mp3"></audio>
+  <audio id="gameOverSound" src="gameover.mp3"></audio>
+  <audio id="clickSound" src="click.mp3"></audio>
+  <audio id="bgMusic" src="background.mp3" loop autoplay></audio>
 
   <script>
     const canvas = document.getElementById('game');
@@ -70,7 +78,19 @@
     const scoreEl = document.getElementById('score');
     const eatSound = document.getElementById('eatSound');
     const gameOverSound = document.getElementById('gameOverSound');
-    const buttonSound = document.getElementById('buttonSound');
+    const clickSound = document.getElementById('clickSound');
+    const bgMusic = document.getElementById('bgMusic');
+    const audioToggle = document.getElementById('audio-toggle');
+
+    audioToggle.onclick = () => {
+      if (bgMusic.paused) {
+        bgMusic.play();
+        audioToggle.textContent = '🔊';
+      } else {
+        bgMusic.pause();
+        audioToggle.textContent = '🔇';
+      }
+    };
 
     const CELL = 20;
     let cols, rows;
@@ -144,12 +164,12 @@
     function setDir(x,y) {
       if (!gameOver) nextDir = (dir.x!==-x||dir.y!==-y)?{x,y}:dir;
     }
-    document.getElementById('up').onclick    = ()=>{buttonSound.play(); setDir(0,-1);};
-    document.getElementById('down').onclick  = ()=>{buttonSound.play(); setDir(0,1);};
-    document.getElementById('left').onclick  = ()=>{buttonSound.play(); setDir(-1,0);};
-    document.getElementById('right').onclick = ()=>{buttonSound.play(); setDir(1,0);};
-    document.getElementById('pause').onclick = ()=>{buttonSound.play(); paused = !paused;};
-    document.getElementById('restart').onclick= ()=>{buttonSound.play(); reset();};
+    document.getElementById('up').onclick    = ()=>{clickSound.play(); setDir(0,-1);};
+    document.getElementById('down').onclick  = ()=>{clickSound.play(); setDir(0,1);};
+    document.getElementById('left').onclick  = ()=>{clickSound.play(); setDir(-1,0);};
+    document.getElementById('right').onclick = ()=>{clickSound.play(); setDir(1,0);};
+    document.getElementById('pause').onclick = ()=>{clickSound.play(); paused = !paused;};
+    document.getElementById('restart').onclick= ()=>{clickSound.play(); reset();};
 
     window.addEventListener('keydown', e=>{
       if (e.key==='ArrowUp') setDir(0,-1);
