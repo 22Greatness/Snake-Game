@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game Ultimate</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      background: rgba(0, 0, 0, 0.75);
+      margin: auto;
+    }
+    #ui {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div>Score: <span id="score">0</span></div>
+    <div>Best: <span id="best">0</span></div>
+    <div>Time: <span id="timer">0</span>s</div>
+  </div>
+  <div id="ui">
+    <button onclick="setDir(0,-1)">↑</button>
+    <button onclick="setDir(-1,0)">←</button>
+    <button onclick="setDir(1,0)">→</button>
+    <button onclick="setDir(0,1)">↓</button>
+    <button onclick="togglePause()">Pause</button>
+    <button onclick="restartGame()">Restart</button>
+  </div>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let CELL = 20;
+    let cols, rows, gameInterval, gameTime = 0;
+    let snake, dir, nextDir, apple, score, bestScore = 0, paused = false;
+
+    function resize() {
+      cols = Math.floor(window.innerWidth / CELL);
+      rows = Math.floor(window.innerHeight / CELL);
+      canvas.width = cols * CELL;
+      canvas.height = rows * CELL;
+    }
+
+    function initGame() {
+      snake = [{x: 5, y: 5}];
+      dir = {x: 1, y: 0};
+      nextDir = dir;
+      spawnApple();
+      score = 0;
+      gameTime = 0;
+      updateHUD();
+      clearInterval(gameInterval);
+      gameInterval = setInterval(gameLoop, 100);
+    }
+
+    function spawnApple() {
+      apple = {
+        x: Math.floor(Math.random() * cols),
+        y: Math.floor(Math.random() * rows)
+      };
+    }
+
+    function setDir(x, y) {
+      if ((x !== -dir.x || y !== -dir.y) && !paused) {
+        nextDir = {x, y};
+      }
+    }
+
+    function togglePause() {
+      paused = !paused;
+    }
+
+    function restartGame() {
+      initGame();
+    }
+
+    function updateHUD() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('best').textContent = bestScore;
+      document.getElementById('timer').textContent = gameTime;
+    }
+
+    function gameLoop() {
+      if (paused) return;
+      gameTime++;
+      dir = nextDir;
+      const head = {x: (snake[0].x + dir.x + cols) % cols, y: (snake[0].y + dir.y + rows) % rows};
+      if (snake.some(s => s.x === head.x && s.y === head.y)) {
+        alert('Game Over!');
+        bestScore = Math.max(score, bestScore);
+        initGame();
+        return;
+      }
+      snake.unshift(head);
+      if (head.x === apple.x && head.y === apple.y) {
+        score++;
+        spawnApple();
+      } else {
+        snake.pop();
+      }
+      updateHUD();
+      drawGame();
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      snake.forEach((s, i) => {
+        ctx.fillStyle = i === 0 ? '#0f0' : '#fff';
+        ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
+      });
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(apple.x * CELL, apple.y * CELL, CELL - 1, CELL - 1);
+    }
+
+    window.addEventListener('resize', () => {
+      resize();
+      drawGame();
+    });
+
+    resize();
+    initGame();
+  </script>
+</body>
+</html>
