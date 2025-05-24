@@ -19,7 +19,7 @@
       background: rgba(0, 0, 0, 0.75);
       margin: auto;
     }
-    #ui {
+    #ui, #modeSelect {
       position: absolute;
       bottom: 10px;
       width: 100%;
@@ -54,7 +54,11 @@
     <div>Best: <span id="best">0</span></div>
     <div>Time: <span id="timer">0</span>s</div>
   </div>
-  <div id="ui">
+  <div id="modeSelect">
+    <button onclick="startGame('solo')">Solo Mode</button>
+    <button onclick="startGame('ai')">AI Mode</button>
+  </div>
+  <div id="ui" style="display:none">
     <button onclick="setDir(0,-1)">↑</button>
     <button onclick="setDir(-1,0)">←</button>
     <button onclick="setDir(1,0)">→</button>
@@ -65,10 +69,13 @@
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
+    const uiPanel = document.getElementById('ui');
+    const modeSelect = document.getElementById('modeSelect');
     let CELL = 20;
     let cols, rows, gameInterval, gameTime = 0;
     let snake, dir, nextDir, apple, score, bestScore = 0, paused = false;
     let aiSnake = [], aiDir = {x: 0, y: 1};
+    let mode = 'solo';
 
     function resize() {
       cols = Math.floor(window.innerWidth / CELL);
@@ -77,11 +84,17 @@
       canvas.height = rows * CELL;
     }
 
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      modeSelect.style.display = 'none';
+      uiPanel.style.display = 'flex';
+      initGame();
+    }
+
     function initGame() {
       snake = [{x: 5, y: 5}];
-      aiSnake = [{x: 15, y: 5}];
+      if (mode === 'ai') aiSnake = [{x: 15, y: 5}];
       dir = {x: 1, y: 0};
-      aiDir = {x: 0, y: 1};
       nextDir = dir;
       spawnApple();
       score = 0;
@@ -123,7 +136,6 @@
       gameTime++;
       dir = nextDir;
 
-      // Player snake logic
       const head = {x: (snake[0].x + dir.x + cols) % cols, y: (snake[0].y + dir.y + rows) % rows};
       if (snake.some(s => s.x === head.x && s.y === head.y)) {
         alert('Game Over!');
@@ -139,19 +151,20 @@
         snake.pop();
       }
 
-      // AI snake logic
-      const aiHead = aiSnake[0];
-      if (aiHead.x < apple.x) aiDir = {x: 1, y: 0};
-      else if (aiHead.x > apple.x) aiDir = {x: -1, y: 0};
-      else if (aiHead.y < apple.y) aiDir = {x: 0, y: 1};
-      else if (aiHead.y > apple.y) aiDir = {x: 0, y: -1};
+      if (mode === 'ai') {
+        const aiHead = aiSnake[0];
+        if (aiHead.x < apple.x) aiDir = {x: 1, y: 0};
+        else if (aiHead.x > apple.x) aiDir = {x: -1, y: 0};
+        else if (aiHead.y < apple.y) aiDir = {x: 0, y: 1};
+        else if (aiHead.y > apple.y) aiDir = {x: 0, y: -1};
 
-      const newAi = {x: (aiHead.x + aiDir.x + cols) % cols, y: (aiHead.y + aiDir.y + rows) % rows};
-      aiSnake.unshift(newAi);
-      if (newAi.x === apple.x && newAi.y === apple.y) {
-        spawnApple();
-      } else {
-        aiSnake.pop();
+        const newAi = {x: (aiHead.x + aiDir.x + cols) % cols, y: (aiHead.y + aiDir.y + rows) % rows};
+        aiSnake.unshift(newAi);
+        if (newAi.x === apple.x && newAi.y === apple.y) {
+          spawnApple();
+        } else {
+          aiSnake.pop();
+        }
       }
 
       updateHUD();
@@ -161,19 +174,18 @@
     function drawGame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw player snake
       snake.forEach((s, i) => {
         ctx.fillStyle = i === 0 ? '#0f0' : '#fff';
         ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
       });
 
-      // Draw AI snake
-      aiSnake.forEach((s, i) => {
-        ctx.fillStyle = i === 0 ? '#f0f' : '#ccc';
-        ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
-      });
+      if (mode === 'ai') {
+        aiSnake.forEach((s, i) => {
+          ctx.fillStyle = i === 0 ? '#f0f' : '#ccc';
+          ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 1, CELL - 1);
+        });
+      }
 
-      // Draw apple
       ctx.fillStyle = '#f00';
       ctx.fillRect(apple.x * CELL, apple.y * CELL, CELL - 1, CELL - 1);
     }
@@ -184,7 +196,6 @@
     });
 
     resize();
-    initGame();
   </script>
 </body>
 </html>
