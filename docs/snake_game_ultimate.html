@@ -93,7 +93,7 @@
     const ctx = canvas.getContext("2d");
     const CELL = 20;
     let cols, rows, snake = [], apple = {}, bombs = [], dir = {}, nextDir = {}, score = 0, best = 0, timer = 0, intervalSpeed = 200, paused = false;
-    let skin = 'classic', username = '', difficulty = 'easy';
+    let skin = 'classic', username = '', difficulty = 'easy', gameInterval;
 
     function resize() {
       cols = Math.floor(window.innerWidth / CELL);
@@ -109,6 +109,7 @@
       document.getElementById('userPrompt').style.display = 'none';
       document.getElementById('displayUser').textContent = username;
       best = localStorage.getItem(username + '_best') || 0;
+      resize();
       initGame();
     }
 
@@ -212,26 +213,6 @@
         li.textContent = '🏆 Snake Master (10 Points)!';
         list.appendChild(li);
       }
-    }
-
-    let startX = 0, startY = 0;
-    canvas.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-    });
-    canvas.addEventListener("touchmove", e => {
-      const t = e.touches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
-      else setDir(0, dy > 0 ? 1 : -1);
-      startX = t.clientX;
-      startY = t.clientY;
-    });
-
-    function setDir(x, y) {
-      if ((x !== -dir.x || y !== -dir.y) && !paused) nextDir = { x, y };
     }
 
     window.addEventListener("resize", () => { resize(); draw(); });
