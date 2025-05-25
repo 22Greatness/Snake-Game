@@ -1,4 +1,3 @@
-<!-- Full working fix for Phase 3.5 + restored mode select -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,27 +9,26 @@
       margin: 0;
       padding: 0;
       font-family: sans-serif;
-      background: #000;
-      color: #fff;
+      background-color: #111;
+      color: white;
       overflow: hidden;
     }
     canvas {
       display: block;
       margin: auto;
-      background-color: #111;
-    }
-    #hud, #controls {
-      position: absolute;
-      top: 10px;
-      font-size: 16px;
+      background-color: #000;
     }
     #hud {
+      position: absolute;
+      top: 10px;
       left: 10px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 6px;
     }
     #controls {
+      position: absolute;
+      top: 10px;
       right: 10px;
       display: flex;
       flex-direction: column;
@@ -46,11 +44,13 @@
       cursor: pointer;
     }
     #ui {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
-      margin-top: 10px;
     }
     .dpad {
       display: flex;
@@ -62,22 +62,28 @@
       gap: 10px;
     }
     #modeSelect {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       display: flex;
-      justify-content: center;
-      margin-top: 20px;
-      gap: 10px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
+
   <div id="hud">
     <div>Score: <span id="score">0</span></div>
     <div>Best: <span id="best">0</span></div>
     <div>Time: <span id="timer">0</span>s</div>
   </div>
+
   <div id="controls">
-    <button onclick="toggleTheme()">🌓 Theme</button>
+    <button onclick="toggleTheme()">🌗 Theme</button>
     <button onclick="shareScore()">📤 Share</button>
   </div>
 
@@ -95,7 +101,7 @@
       </div>
       <button onclick="setDir(0,1)">🔽</button>
     </div>
-    <div style="margin-top: 8px;">
+    <div>
       <button onclick="togglePause()">Pause</button>
       <button onclick="restartGame()">Restart</button>
     </div>
@@ -107,7 +113,7 @@
     const CELL = 20;
     let cols, rows, gameInterval, timer = 0;
     let snake = [], apple = {}, dir = {}, nextDir = {}, paused = false, score = 0, best = 0;
-    let bombs = [], powerUps = [], mode = "solo";
+    let bombs = [], mode = "solo";
 
     function resize() {
       cols = Math.floor(window.innerWidth / CELL);
@@ -124,7 +130,7 @@
 
     function shareScore() {
       const score = document.getElementById("score").textContent;
-      const tweet = `I scored ${score} in the Ultimate Snake Game! 🐍 Try it out: https://22greatness.github.io/Snake-Game/`;
+      const tweet = `I scored ${score} in the Ultimate Snake Game! 🐍 https://22greatness.github.io/Snake-Game/`;
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`);
     }
 
@@ -150,7 +156,6 @@
       timer = 0;
       spawnApple();
       bombs = [];
-      powerUps = [];
       clearInterval(gameInterval);
       gameInterval = setInterval(gameLoop, 100);
     }
