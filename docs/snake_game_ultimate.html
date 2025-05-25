@@ -1,221 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ultimate Snake Game V4.0</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultimate Snake Game</title>
   <style>
-    * { box-sizing: border-box; }
     html, body {
       margin: 0;
-      height: 100%;
-      overflow: hidden;
+      padding: 0;
       background: #000;
-      font-family: Arial, sans-serif;
-      color: white;
+      color: #fff;
+      font-family: sans-serif;
+      overflow: hidden;
     }
-    canvas {
+    #gameCanvas {
       display: block;
       margin: 0 auto;
       background: #111;
+      border: 2px solid #333;
     }
-    #ui {
+    #ui, #start-screen {
       position: absolute;
-      bottom: 12px;
+      width: 100%;
+      text-align: center;
+      z-index: 2;
+    }
+    #start-screen {
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #start-screen input, #start-screen select, #start-button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 18px;
+    }
+    #controls {
+      position: absolute;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    .row {
+    #controls .row {
       display: flex;
-      gap: 6px;
-      margin: 4px;
+      gap: 10px;
     }
-    button {
-      padding: 12px;
+    .ctrl-btn {
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      text-align: center;
+      border-radius: 10px;
       background: #222;
-      border: none;
-      border-radius: 6px;
       color: white;
-      font-size: 18px;
-    }
-    #info {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
-      padding: 8px;
-      border-radius: 5px;
-    }
-    #achievements {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      font-size: 14px;
-      color: #ccc;
+      border: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="game" width="600" height="400"></canvas>
-  <div id="info">
-    <div>Score: <span id="score">0</span></div>
-    <div>Best: <span id="best">0</span></div>
-    <div>Time: <span id="time">0s</span></div>
-    <div>User: <span id="username"></span></div>
+  <div id="start-screen">
+    <h1>Ultimate Snake Game</h1>
+    <input type="text" id="username" placeholder="Enter your username" />
+    <select id="mode">
+      <option value="solo">Solo</option>
+      <option value="ai">Play vs AI</option>
+    </select>
+    <select id="skin">
+      <option value="green">Green Snake</option>
+      <option value="red">Red Snake</option>
+      <option value="blue">Blue Snake</option>
+    </select>
+    <button id="start-button">Start Game</button>
   </div>
-  <div id="achievements"><strong>Achievements:</strong><div id="achieve-list"></div></div>
-  <div id="ui">
+
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="controls">
     <div class="row">
-      <button onclick="setDir('up')">&#8679;</button>
+      <button class="ctrl-btn" onclick="changeDirection('up')">⬆️</button>
     </div>
     <div class="row">
-      <button onclick="setDir('left')">&#8678;</button>
-      <button onclick="setDir('right')">&#8680;</button>
+      <button class="ctrl-btn" onclick="changeDirection('left')">⬅️</button>
+      <button class="ctrl-btn" onclick="changeDirection('right')">➡️</button>
     </div>
     <div class="row">
-      <button onclick="setDir('down')">&#8681;</button>
-    </div>
-    <div class="row">
-      <button onclick="pauseGame()">Pause</button>
-      <button onclick="restartGame()">Restart</button>
+      <button class="ctrl-btn" onclick="changeDirection('down')">⬇️</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById("game");
+    const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    const scoreEl = document.getElementById("score");
-    const bestEl = document.getElementById("best");
-    const timeEl = document.getElementById("time");
-    const userEl = document.getElementById("username");
-    const achievements = document.getElementById("achieve-list");
+    const startScreen = document.getElementById("start-screen");
+    const usernameInput = document.getElementById("username");
+    const modeSelect = document.getElementById("mode");
+    const skinSelect = document.getElementById("skin");
+    const startBtn = document.getElementById("start-button");
 
-    let box = 20, dir = "right", gameLoop, snake, food, bombs, score, timer = 0, interval = 150, paused = false;
-    let username = prompt("Enter your username:", "Player");
-    let mode = prompt("Mode: solo or ai?", "solo");
-    let skin = prompt("Snake color? (green/blue/red)", "green");
-    userEl.textContent = username;
+    let gameRunning = false;
+    let direction = "right";
+    let snake = [{ x: 160, y: 300 }];
+    let snakeColor = "green";
+    let food = { x: 320, y: 300 };
+    let bombs = [];
+    let score = 0;
+    let interval = 200;
 
-    let best = localStorage.getItem("best") || 0;
-    bestEl.textContent = best;
-
-    function initGame() {
-      snake = [{x: 5, y: 5}];
-      food = spawn();
-      bombs = [spawn(), spawn()];
-      score = 0;
-      dir = "right";
-      interval = 150;
-      timer = 0;
-      clearInterval(gameLoop);
-      gameLoop = setInterval(update, interval);
+    function startGame() {
+      const username = usernameInput.value || "Player";
+      const mode = modeSelect.value;
+      snakeColor = skinSelect.value;
+      document.getElementById("start-screen").style.display = "none";
+      gameRunning = true;
+      gameLoop();
     }
 
-    function spawn() {
-      return {
-        x: Math.floor(Math.random()*canvas.width/box),
-        y: Math.floor(Math.random()*canvas.height/box)
-      };
+    function drawCircle(x, y, color) {
+      ctx.beginPath();
+      ctx.arc(x + 10, y + 10, 10, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.closePath();
     }
 
-    function setDir(d) {
-      if ((d === "left" && dir !== "right") || (d === "right" && dir !== "left") ||
-          (d === "up" && dir !== "down") || (d === "down" && dir !== "up")) {
-        dir = d;
-      }
-    }
-
-    function pauseGame() {
-      paused = !paused;
-    }
-
-    function restartGame() {
-      initGame();
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      snake.forEach(seg => drawCircle(seg.x, seg.y, snakeColor));
+      drawCircle(food.x, food.y, "red");
+      bombs.forEach(b => drawCircle(b.x, b.y, "purple"));
     }
 
     function update() {
-      if (paused) return;
-      timer++;
-      timeEl.textContent = timer + "s";
-
-      const head = {...snake[0]};
-      if (dir === "left") head.x--;
-      if (dir === "right") head.x++;
-      if (dir === "up") head.y--;
-      if (dir === "down") head.y++;
-
-      if (head.x < 0 || head.y < 0 || head.x >= canvas.width/box || head.y >= canvas.height/box || snake.some(s => s.x === head.x && s.y === head.y)) {
-        alert("Game Over");
-        if (score > best) localStorage.setItem("best", score);
-        return initGame();
-      }
+      const head = { ...snake[0] };
+      if (direction === "right") head.x += 20;
+      if (direction === "left") head.x -= 20;
+      if (direction === "up") head.y -= 20;
+      if (direction === "down") head.y += 20;
+      snake.unshift(head);
 
       if (head.x === food.x && head.y === food.y) {
-        food = spawn();
         score++;
-        interval = Math.max(50, interval - 2);
-        clearInterval(gameLoop);
-        gameLoop = setInterval(update, interval);
+        food = randomCoord();
+        if (interval > 50) interval -= 10;
+        if (Math.random() < 0.3) bombs.push(randomCoord());
       } else {
         snake.pop();
       }
 
-      for (let b of bombs) {
-        if (head.x === b.x && head.y === b.y) {
-          alert("Boom! Game Over");
-          if (score > best) localStorage.setItem("best", score);
-          return initGame();
-        }
+      if (bombs.some(b => b.x === head.x && b.y === head.y)) {
+        alert("Game Over");
+        gameRunning = false;
       }
+    }
 
-      snake.unshift(head);
+    function randomCoord() {
+      const x = Math.floor(Math.random() * canvas.width / 20) * 20;
+      const y = Math.floor(Math.random() * canvas.height / 20) * 20;
+      return { x, y };
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
       draw();
+      setTimeout(gameLoop, interval);
     }
 
-    function draw() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-
-      ctx.fillStyle = skin;
-      for (let s of snake) {
-        ctx.fillRect(s.x*box, s.y*box, box-1, box-1);
-      }
-
-      ctx.fillStyle = "red";
-      ctx.fillRect(food.x*box, food.y*box, box-1, box-1);
-
-      for (let b of bombs) {
-        ctx.beginPath();
-        ctx.arc(b.x*box + box/2, b.y*box + box/2, box/2 - 2, 0, 2*Math.PI);
-        ctx.fillStyle = "purple";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(b.x*box + box/2, b.y*box + box/2 - 5, 2, 0, 2*Math.PI);
-        ctx.fillStyle = "orange";
-        ctx.fill();
-      }
-
-      scoreEl.textContent = score;
+    function changeDirection(dir) {
+      direction = dir;
     }
 
-    // Touch support
-    let touchStartX, touchStartY;
-    canvas.addEventListener('touchstart', e => {
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-    });
-    canvas.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 'right' : 'left');
-      else setDir(dy > 0 ? 'down' : 'up');
-    });
+    canvas.addEventListener('touchstart', handleSwipeStart, false);
+    canvas.addEventListener('touchend', handleSwipeEnd, false);
 
-    initGame();
+    let startX, startY;
+    function handleSwipeStart(e) {
+      const touch = e.changedTouches[0];
+      startX = touch.screenX;
+      startY = touch.screenY;
+    }
+    function handleSwipeEnd(e) {
+      const touch = e.changedTouches[0];
+      const dx = touch.screenX - startX;
+      const dy = touch.screenY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) direction = dx > 0 ? "right" : "left";
+      else direction = dy > 0 ? "down" : "up";
+    }
+
+    startBtn.addEventListener("click", startGame);
   </script>
 </body>
 </html>
