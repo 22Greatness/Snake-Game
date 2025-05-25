@@ -27,12 +27,23 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 10px;
       flex-wrap: wrap;
+      gap: 10px;
+    }
+    .dpad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .dpad-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
     button {
       padding: 10px 16px;
-      font-size: 16px;
+      font-size: 24px;
       border: none;
       border-radius: 5px;
       background: #333;
@@ -66,19 +77,24 @@
     <button onclick="startGame('solo')">Solo Mode</button>
     <button onclick="startGame('ai')">AI Mode</button>
   </div>
-  <div id="ui" style="display:none">
-    <button onclick="setDir(0,-1)">↑</button>
-    <button onclick="setDir(-1,0)">←</button>
-    <button onclick="setDir(1,0)">→</button>
-    <button onclick="setDir(0,1)">↓</button>
-    <button onclick="togglePause()">Pause</button>
-    <button onclick="restartGame()">Restart</button>
+  <div id="ui" style="display:none; flex-direction: column; align-items: center; gap: 10px;">
+    <div class="dpad">
+      <button onclick="setDir(0,-1)">🔼</button>
+      <div class="dpad-row">
+        <button onclick="setDir(-1,0)">◀</button>
+        <button onclick="setDir(1,0)">▶</button>
+      </div>
+      <button onclick="setDir(0,1)">🔽</button>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="togglePause()">Pause</button>
+      <button onclick="restartGame()">Restart</button>
+    </div>
   </div>
   <script>
+    // Full game logic restoration begins here
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    const uiPanel = document.getElementById('ui');
-    const modeSelect = document.getElementById('modeSelect');
     let CELL = 20, cols, rows, gameInterval, gameTime = 0;
     let snake = [], dir = {}, nextDir = {}, apple = {}, score = 0, bestScore = 0, paused = false;
     let aiSnake = [], aiDir = {}, mode = 'solo';
@@ -106,8 +122,8 @@
 
     function startGame(selectedMode) {
       mode = selectedMode;
-      modeSelect.style.display = 'none';
-      uiPanel.style.display = 'flex';
+      document.getElementById('modeSelect').style.display = 'none';
+      document.getElementById('ui').style.display = 'flex';
       loadGame();
     }
 
