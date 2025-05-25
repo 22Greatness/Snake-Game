@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snake Game Ultimate v4.0</title>
+  <title>Snake Game Ultimate</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom right, #111, #222);
-      color: #fff;
+      font-family: sans-serif;
+      background-color: #111;
+      color: white;
       overflow: hidden;
     }
     canvas {
@@ -18,82 +18,103 @@
       margin: auto;
       background-color: #000;
       touch-action: none;
-      box-shadow: 0 0 20px #0f0;
     }
-    #hud, #achievements {
+    #hud {
       position: absolute;
+      top: 10px;
+      left: 10px;
       background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 6px;
     }
-    #hud {
+    #controls {
+      position: absolute;
       top: 10px;
-      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    #achievements {
-      bottom: 10px;
-      left: 10px;
+    button {
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
     }
-    #userPrompt {
+    #ui {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .dpad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .dpad-row {
+      display: flex;
+      gap: 10px;
+    }
+    #modeSelect {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 10px;
-    }
-    #userPrompt input, #userPrompt select, #userPrompt button {
-      padding: 10px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-    }
-    #userPrompt button {
-      background-color: #28a745;
-      color: #fff;
-      cursor: pointer;
+      align-items: center;
+      gap: 12px;
     }
   </style>
 </head>
 <body>
-  <div id="userPrompt">
-    <input type="text" id="username" placeholder="Enter your name">
-    <select id="difficulty">
-      <option value="easy">Easy</option>
-      <option value="hard">Hard</option>
-    </select>
-    <select id="skin">
-      <option value="classic">Classic</option>
-      <option value="neon">Neon</option>
-      <option value="rainbow">Rainbow</option>
-    </select>
-    <button onclick="startGameWithUser()">Start Game</button>
-  </div>
-
   <canvas id="game"></canvas>
 
   <div id="hud">
     <div>Score: <span id="score">0</span></div>
     <div>Best: <span id="best">0</span></div>
     <div>Time: <span id="timer">0</span>s</div>
-    <div>User: <span id="displayUser"></span></div>
   </div>
 
-  <div id="achievements">
-    <strong>Achievements:</strong>
-    <ul id="achievementList"></ul>
+  <div id="controls">
+    <button onclick="toggleTheme()">🌗 Theme</button>
+    <button onclick="shareScore()">📤 Share</button>
+  </div>
+
+  <div id="modeSelect">
+    <button onclick="startGame('solo')">🎮 Solo Mode</button>
+    <button onclick="startGame('ai')">🤖 AI Mode</button>
+  </div>
+
+  <div id="ui" style="display:none;">
+    <div class="dpad">
+      <button ontouchstart="setDir(0,-1)">🔼</button>
+      <div class="dpad-row">
+        <button ontouchstart="setDir(-1,0)">◀</button>
+        <button ontouchstart="setDir(1,0)">▶</button>
+      </div>
+      <button ontouchstart="setDir(0,1)">🔽</button>
+    </div>
+    <div>
+      <button onclick="togglePause()">Pause</button>
+      <button onclick="restartGame()">Restart</button>
+    </div>
   </div>
 
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const CELL = 20;
-    let cols, rows, snake = [], apple = {}, bombs = [], dir = {}, nextDir = {}, score = 0, best = 0, timer = 0, intervalSpeed = 200, paused = false;
-    let skin = 'classic', username = '', difficulty = 'easy', gameInterval;
+    let cols, rows, gameInterval, timer = 0, intervalSpeed = 200;
+    let snake = [], apple = {}, dir = {}, nextDir = {}, paused = false, score = 0, best = 0;
+    let bombs = [], mode = "solo";
 
     function resize() {
       cols = Math.floor(window.innerWidth / CELL);
@@ -102,14 +123,29 @@
       canvas.height = rows * CELL;
     }
 
-    function startGameWithUser() {
-      username = document.getElementById('username').value || 'Player';
-      difficulty = document.getElementById('difficulty').value;
-      skin = document.getElementById('skin').value;
-      document.getElementById('userPrompt').style.display = 'none';
-      document.getElementById('displayUser').textContent = username;
-      best = localStorage.getItem(username + '_best') || 0;
-      resize();
+    function toggleTheme() {
+      const dark = document.body.style.backgroundColor === "black";
+      document.body.style.backgroundColor = dark ? "#eee" : "black";
+      document.body.style.color = dark ? "black" : "white";
+    }
+
+    function shareScore() {
+      const score = document.getElementById("score").textContent;
+      const tweet = `I scored ${score} in the Ultimate Snake Game! 🐍 https://22greatness.github.io/Snake-Game/`;
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`);
+    }
+
+    function setDir(x, y) {
+      if ((x !== -dir.x || y !== -dir.y) && !paused) nextDir = { x, y };
+    }
+
+    function togglePause() { paused = !paused; }
+    function restartGame() { initGame(); }
+
+    function startGame(selected) {
+      mode = selected;
+      document.getElementById("modeSelect").style.display = "none";
+      document.getElementById("ui").style.display = "flex";
       initGame();
     }
 
@@ -119,10 +155,10 @@
       nextDir = dir;
       score = 0;
       timer = 0;
-      bombs = [];
+      intervalSpeed = 200;
       spawnApple();
+      bombs = [];
       clearInterval(gameInterval);
-      intervalSpeed = difficulty === 'hard' ? 150 : 200;
       gameInterval = setInterval(gameLoop, intervalSpeed);
     }
 
@@ -135,7 +171,7 @@
 
     function updateSpeed() {
       clearInterval(gameInterval);
-      intervalSpeed = Math.max(50, (difficulty === 'hard' ? 150 : 200) - score * 5);
+      intervalSpeed = Math.max(50, 200 - score * 5);
       gameInterval = setInterval(gameLoop, intervalSpeed);
     }
 
@@ -143,11 +179,13 @@
       if (paused) return;
       timer++;
       dir = nextDir;
-      const head = { x: (snake[0].x + dir.x + cols) % cols, y: (snake[0].y + dir.y + rows) % rows };
+      const head = {
+        x: (snake[0].x + dir.x + cols) % cols,
+        y: (snake[0].y + dir.y + rows) % rows
+      };
       if (snake.some(s => s.x === head.x && s.y === head.y) || bombs.some(b => b.x === head.x && b.y === head.y)) {
-        alert('💥 Game Over');
-        best = Math.max(score, best);
-        localStorage.setItem(username + '_best', best);
+        alert("💥 Game Over");
+        best = Math.max(best, score);
         initGame();
         return;
       }
@@ -156,34 +194,29 @@
         score++;
         spawnApple();
         updateSpeed();
-        unlockAchievement(score);
       } else snake.pop();
 
-      if (timer % (difficulty === 'hard' ? 25 : 40) === 0) {
+      if (timer % 30 === 0) {
         bombs.push({ x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows) });
       }
 
-      draw();
-      updateHUD();
-    }
-
-    function updateHUD() {
       document.getElementById("score").textContent = score;
       document.getElementById("best").textContent = best;
       document.getElementById("timer").textContent = timer;
+      draw();
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       snake.forEach((s, i) => {
-        ctx.fillStyle = getSkinColor(i);
+        ctx.fillStyle = i === 0 ? "lime" : "#88ff88";
         ctx.beginPath();
-        ctx.arc(s.x * CELL + CELL / 2, s.y * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
+        ctx.arc(s.x * CELL + CELL/2, s.y * CELL + CELL/2, CELL/2 - 2, 0, 2 * Math.PI);
         ctx.fill();
       });
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = "red";
       ctx.beginPath();
-      ctx.arc(apple.x * CELL + CELL / 2, apple.y * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
+      ctx.arc(apple.x * CELL + CELL/2, apple.y * CELL + CELL/2, CELL/2 - 2, 0, 2 * Math.PI);
       ctx.fill();
 
       bombs.forEach(b => {
@@ -193,27 +226,25 @@
       });
     }
 
-    function getSkinColor(index) {
-      if (skin === 'neon') return `hsl(${index * 25}, 100%, 50%)`;
-      if (skin === 'rainbow') return `hsl(${Math.random() * 360}, 100%, 60%)`;
-      return index === 0 ? 'lime' : '#88ff88';
-    }
-
-    function unlockAchievement(score) {
-      const list = document.getElementById('achievementList');
-      if (score === 5 && !document.getElementById('a5')) {
-        const li = document.createElement('li');
-        li.id = 'a5';
-        li.textContent = '🥇 First 5 Apples!';
-        list.appendChild(li);
+    // Swipe control
+    let startX = 0, startY = 0;
+    canvas.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+    });
+    canvas.addEventListener("touchmove", e => {
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        setDir(dx > 0 ? 1 : -1, 0);
+      } else {
+        setDir(0, dy > 0 ? 1 : -1);
       }
-      if (score === 10 && !document.getElementById('a10')) {
-        const li = document.createElement('li');
-        li.id = 'a10';
-        li.textContent = '🏆 Snake Master (10 Points)!';
-        list.appendChild(li);
-      }
-    }
+      startX = t.clientX;
+      startY = t.clientY;
+    });
 
     window.addEventListener("resize", () => { resize(); draw(); });
     resize();
