@@ -1,3 +1,4 @@
+<!-- Full polished snake game update: Phase 3.5 (Bomb icon, realistic snake, non-obstructive controls) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,13 +23,15 @@
       touch-action: none;
     }
     #ui, #modeSelect {
-      position: absolute;
-      bottom: 10px;
+      position: relative;
+      bottom: 0;
+      margin-top: 10px;
       width: 100%;
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
       gap: 10px;
+      z-index: 10;
     }
     .dpad {
       display: flex;
@@ -92,7 +95,6 @@
     </div>
   </div>
   <script>
-    // Full game logic restoration begins here
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     let CELL = 20, cols, rows, gameInterval, gameTime = 0;
@@ -223,11 +225,33 @@
 
     function drawGame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      snake.forEach((s, i) => { ctx.fillStyle = i === 0 ? '#0f0' : '#fff'; ctx.fillRect(s.x*CELL, s.y*CELL, CELL-1, CELL-1); });
-      if (mode === 'ai') aiSnake.forEach((s,i)=>{ ctx.fillStyle = i===0 ? '#f0f' : '#ccc'; ctx.fillRect(s.x*CELL, s.y*CELL, CELL-1,CELL-1); });
-      ctx.fillStyle = '#f00'; ctx.fillRect(apple.x*CELL, apple.y*CELL, CELL-1, CELL-1);
-      powerUps.forEach(p => { ctx.fillStyle = '#0ff'; ctx.fillRect(p.x*CELL, p.y*CELL, CELL-1, CELL-1); });
-      bombs.forEach(b => { ctx.fillStyle = '#f90'; ctx.fillRect(b.x*CELL, b.y*CELL, CELL-1, CELL-1); });
+      snake.forEach((s, i) => {
+        ctx.fillStyle = i === 0 ? '#00ff00' : '#88ff88';
+        ctx.beginPath();
+        ctx.arc(s.x * CELL + CELL/2, s.y * CELL + CELL/2, CELL / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (mode === 'ai') aiSnake.forEach((s,i)=>{
+        ctx.fillStyle = i === 0 ? '#f0f' : '#ccc';
+        ctx.beginPath();
+        ctx.arc(s.x * CELL + CELL/2, s.y * CELL + CELL/2, CELL / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#f00';
+      ctx.beginPath();
+      ctx.arc(apple.x * CELL + CELL/2, apple.y * CELL + CELL/2, CELL / 2 - 2, 0, Math.PI * 2);
+      ctx.fill();
+      powerUps.forEach(p => {
+        ctx.fillStyle = '#0ff';
+        ctx.beginPath();
+        ctx.arc(p.x * CELL + CELL/2, p.y * CELL + CELL/2, CELL / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      bombs.forEach(b => {
+        ctx.fillStyle = '#fff';
+        ctx.font = `${CELL}px serif`;
+        ctx.fillText("💣", b.x * CELL, b.y * CELL + CELL);
+      });
     }
 
     window.addEventListener('resize', () => { resize(); drawGame(); });
